@@ -1,0 +1,31 @@
+# Secrets
+.env
+.env.local
+*.env
+!.env.example
+
+# Local IDE / editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Node / npm (if anyone adds JS tooling)
+node_modules/
+npm-debug.log*
+
+# Test artifacts
+tests/output/
+tests/*.tmp.json
+
+# n8n local
+.n8n/
+*.sqlite
+*.sqlite-journal
+
+# Telegram plugin local state
+access.json
+
+# Logs
+logs/
+*.log

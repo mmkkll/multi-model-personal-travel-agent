@@ -1,0 +1,383 @@
+{
+  "name": "travel-agent-multi-model",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "travel-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-1-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        256,
+        304
+      ],
+      "webhookId": "travel-agent"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"contents\":[{\"parts\":[{\"text\":\"Sei un travel agent esperto. Rispondi in italiano. Aeroporti di partenza: FLR, PSA, BLQ (se non ci sono voli diretti, scala a FCO). Alleanza: Star Alliance, massimizza Miles & More. Hotel: preferenza Marriott Bonvoy. Includi: opzioni volo con link, 2-3 hotel con link booking, 2-3 ristoranti con Google Maps link, attrazioni principali, note pratiche (ZTL, trasporti, documenti), packing essentials, un consiglio non ovvio. Query: \" + $('Webhook').first().json.body.query}]}]}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "node-2-gemini",
+      "name": "Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        112
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.PERPLEXITY_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\":\"sonar-pro\",\"messages\":[{\"role\":\"user\",\"content\":\"Sei un travel agent esperto. Rispondi in italiano. Aeroporti di partenza: FLR, PSA, BLQ (se non ci sono voli diretti, scala a FCO). Alleanza: Star Alliance, massimizza Miles & More. Hotel: preferenza Marriott Bonvoy. Cerca informazioni aggiornate su: opzioni volo con prezzi e link, hotel con prezzi e link booking, ristoranti consigliati con link, note pratiche. Query: \" + $('Webhook').first().json.body.query}]}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "node-3-perplexity",
+      "name": "Perplexity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        384
+      ],
+      "retryOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "numberInputs": 5
+      },
+      "id": "node-4-merge",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        800,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Gemini\nlet geminiText = '';\ntry { geminiText = (items[0]?.json?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('\\n'); }\ncatch (e) { geminiText = 'Gemini: errore'; }\n\n// Perplexity\nlet perplexityText = '';\ntry { perplexityText = items[1]?.json?.choices?.[0]?.message?.content || ''; }\ncatch (e) { perplexityText = 'Perplexity: errore'; }\n\n// OpenAI\nlet openaiText = '';\ntry { openaiText = items[2]?.json?.choices?.[0]?.message?.content || ''; }\ncatch (e) { openaiText = 'OpenAI: errore'; }\n\n// Duffel multi-origin (now from Code node, structured)\nlet duffelStruct = { error: null, byOrigin: {}, primary: null, recommendedOrigin: null, usedFallback: false, note: '' };\ntry {\n  const d = items[3]?.json;\n  if (d?.byOrigin) {\n    duffelStruct = {\n      primary: d.primary,\n      recommendedOrigin: d.recommendedOrigin,\n      usedFallback: d.usedFallback,\n      note: d.note,\n      byOrigin: d.byOrigin,\n      error: null\n    };\n  } else {\n    duffelStruct.error = 'no byOrigin in response';\n  }\n} catch (e) { duffelStruct.error = String(e); }\n\n// Google Maps Transit\nlet gmapsStruct = { error: null, routes: [] };\ntry {\n  const r = items[4]?.json;\n  if (r?.error) {\n    gmapsStruct.error = r.error.message || JSON.stringify(r.error);\n  } else {\n    const routes = (r?.routes || []).slice(0, 3);\n    gmapsStruct.routes = routes.map(rt => {\n      const legs = rt.legs || [];\n      const transitSteps = [];\n      for (const leg of legs) {\n        for (const s of (leg.steps || [])) {\n          if (s.transitDetails) {\n            const td = s.transitDetails;\n            transitSteps.push({\n              vehicle: td.transitLine?.vehicle?.type,\n              line: td.transitLine?.nameShort || td.transitLine?.name,\n              from: td.stopDetails?.departureStop?.name,\n              to: td.stopDetails?.arrivalStop?.name\n            });\n          }\n        }\n      }\n      return {\n        duration: rt.duration,\n        distance_km: Math.round((rt.distanceMeters || 0) / 1000),\n        steps: transitSteps\n      };\n    });\n  }\n} catch (e) { gmapsStruct.error = String(e); }\n\nreturn [{\n  json: {\n    gemini: geminiText,\n    perplexity: perplexityText,\n    openai: openaiText,\n    duffel: duffelStruct,\n    gmaps: gmapsStruct\n  }\n}];\n"
+      },
+      "id": "node-5-code",
+      "name": "Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "node-6-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1264,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"Sei un travel agent esperto. Rispondi in italiano. Aeroporti di partenza: FLR, PSA, BLQ (se non ci sono voli diretti, scala a FCO). Alleanza: Star Alliance, massimizza Miles & More. Hotel: preferenza Marriott Bonvoy. Includi: opzioni volo con link, 2-3 hotel con link booking, 2-3 ristoranti con Google Maps link, attrazioni principali, note pratiche (ZTL, trasporti, documenti), packing essentials, un consiglio non ovvio. Query: \" + $('Webhook').first().json.body.query}],\"temperature\":0.7,\"max_tokens\":8192}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "node-7-openai",
+      "name": "OpenAI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        672
+      ],
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-8-extract-params",
+      "name": "Extract Params",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        304
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_object\"},\"messages\":[{\"role\":\"user\",\"content\":\"Estrai parametri viaggio. Restituisci SOLO JSON valido senza markdown.\\nREGOLE IATA:\\n- Lausanne -> GVA (no aeroporto commerciale, usa Ginevra)\\n- Losanna -> GVA\\n- Firenze -> FLR\\n- Roma -> FCO\\n- Milano -> MXP (default), LIN se specificato Linate\\n- Bologna -> BLQ\\n- Pisa -> PSA\\n- Barcellona -> BCN\\n- Generale: se citt\\u00e0 non ha aeroporto commerciale IATA, usa il pi\\u00f9 vicino con voli scheduled.\\n\\nSchema JSON:\\n{\\n  \\\"origin_iata\\\": \\\"codice IATA 3 lettere\\\",\\n  \\\"destination_iata\\\": \\\"codice IATA 3 lettere\\\",\\n  \\\"origin_address\\\": \\\"Citta, Stato\\\",\\n  \\\"destination_address\\\": \\\"Citta, Stato\\\",\\n  \\\"departure_date\\\": \\\"YYYY-MM-DD\\\",\\n  \\\"return_date\\\": null o \\\"YYYY-MM-DD\\\",\\n  \\\"passengers\\\": numero >= 1,\\n  \\\"departure_datetime_iso\\\": \\\"YYYY-MM-DDTHH:MM:SSZ con orario default 07:00 UTC\\\"\\n}\\n\\nQuery: \" + $json.body.query}]}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-9-duffel",
+      "name": "Duffel Flights",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        500
+      ],
+      "parameters": {
+        "jsCode": "// Duffel multi-origin search — when no direct flights from primary, try fallback chain\n// Rule (Mirko 2026-04-29): if FLR has no direct, try BLQ, PSA, FCO, LIN in order\nconst params = JSON.parse($input.first().json.choices[0].message.content);\nconst dest = params.destination_iata;\nconst date = params.departure_date;\nconst passengers = params.passengers || 1;\nconst TOKEN = process.env.DUFFEL_API_KEY;\n\nconst FALLBACK_CHAIN = ['FLR', 'BLQ', 'PSA', 'FCO', 'LIN'];\nconst primary = params.origin_iata || 'FLR';\nconst origins = [primary, ...FALLBACK_CHAIN.filter(o => o !== primary)];\n\nconst byOrigin = {};\nfor (const origin of origins) {\n  try {\n    const data = await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.duffel.com/air/offer_requests',\n      headers: {\n        'Authorization': `Bearer ${TOKEN}`,\n        'Duffel-Version': 'v2',\n        'Content-Type': 'application/json',\n        'Accept': 'application/json'\n      },\n      body: {\n        data: {\n          slices: [{origin, destination: dest, departure_date: date}],\n          passengers: Array.from({length: passengers}, () => ({type: 'adult'})),\n          cabin_class: 'economy'\n        }\n      },\n      json: true,\n      timeout: 30000\n    });\n    if (data.errors) {\n      byOrigin[origin] = { error: JSON.stringify(data.errors).slice(0,200), direct: [], any: [] };\n      continue;\n    }\n    const offers = data.data?.offers || [];\n    const seen = new Map();\n    for (const o of offers) {\n      const seg = o.slices[0].segments;\n      const k = `${seg[0].marketing_carrier?.iata_code}-${seg[0].marketing_carrier_flight_number}-${seg[0].departing_at}`;\n      const price = parseFloat(o.total_amount);\n      const existing = seen.get(k);\n      if (!existing || existing.price > price) {\n        seen.set(k, {\n          carrier: seg[0].marketing_carrier?.name,\n          flight_number: (seg[0].marketing_carrier?.iata_code || '') + (seg[0].marketing_carrier_flight_number || ''),\n          stops: seg.length - 1,\n          dep: seg[0].departing_at,\n          arr: seg[seg.length-1].arriving_at,\n          price,\n          currency: o.total_currency,\n          op: seg[0].operating_carrier?.name && seg[0].operating_carrier.name !== seg[0].marketing_carrier?.name ? seg[0].operating_carrier.name : null\n        });\n      }\n    }\n    const all = Array.from(seen.values()).sort((a,b)=>a.price-b.price);\n    byOrigin[origin] = {\n      direct: all.filter(o => o.stops === 0).slice(0, 5),\n      any: all.slice(0, 5)\n    };\n  } catch (err) {\n    byOrigin[origin] = { error: String(err).slice(0,200), direct: [], any: [] };\n  }\n}\n\nconst primaryHasDirect = (byOrigin[primary]?.direct?.length || 0) > 0;\nlet recommendedOrigin = primary;\nlet usedFallback = false;\nif (!primaryHasDirect) {\n  for (const o of FALLBACK_CHAIN) {\n    if (byOrigin[o]?.direct?.length > 0) {\n      recommendedOrigin = o;\n      usedFallback = true;\n      break;\n    }\n  }\n}\n\nreturn [{\n  json: {\n    byOrigin,\n    primary,\n    recommendedOrigin,\n    usedFallback,\n    originsChecked: origins,\n    note: usedFallback ? `Nessun volo diretto da ${primary}, fallback su ${recommendedOrigin}` : `Diretti disponibili da ${primary}`\n  }\n}];\n"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-10-gmaps",
+      "name": "Google Maps Transit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://routes.googleapis.com/directions/v2:computeRoutes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Goog-Api-Key",
+              "value": "{{ $env.GOOGLE_MAPS_API_KEY }}"
+            },
+            {
+              "name": "X-Goog-FieldMask",
+              "value": "routes.duration,routes.distanceMeters,routes.legs.duration,routes.legs.steps.travelMode,routes.legs.steps.transitDetails"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify((function(){\n  var p = JSON.parse($json.choices[0].message.content);\n  return {\n    \"origin\": {\"address\": p.origin_address},\n    \"destination\": {\"address\": p.destination_address},\n    \"travelMode\": \"TRANSIT\",\n    \"transitPreferences\": {\n      \"allowedTravelModes\": [\"TRAIN\",\"RAIL\",\"BUS\",\"SUBWAY\",\"LIGHT_RAIL\"],\n      \"routingPreference\": \"FEWER_TRANSFERS\"\n    },\n    \"departureTime\": p.departure_datetime_iso,\n    \"computeAlternativeRoutes\": true\n  };\n})()) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Params": {
+      "main": [
+        [
+          {
+            "node": "Gemini",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Perplexity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Duffel Flights",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Maps Transit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Duffel Flights": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Google Maps Transit": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Results": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "versionId": "v2-multi-model-2026-04-29",
+  "meta": {},
+  "tags": []
+}
