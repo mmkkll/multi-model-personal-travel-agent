@@ -76,7 +76,7 @@ Customize the airline/hotel sender list in the prompt to match your usual provid
 
 For each email processed:
 
-- **Booking + matched existing page** → append details to existing page (e.g., add a flight to ✈️ Voli table)
+- **Booking + matched existing page** → append details to existing page (e.g., add a flight to ✈️ Flights table)
 - **Booking + no match** → create new page in `Planning`
 - **Signal-WORK + no match** → create new page in `business/work`
 - **Signal-LEISURE + no match** → create new page in `Planning` (will auto-move to Ready to Travel on departure day)
@@ -104,6 +104,6 @@ Modify the cron expression (default `37 */2 * * *`). Examples:
 ## Limitations
 
 - Currently scans **Gmail only**. Adding iCloud, Outlook, etc. requires additional MCP integrations.
-- Telegram CC of booking emails (e.g., colleague forwarding you a hotel reservation) classified by Mirko-pattern — adjust if your senders are different.
+- The classification heuristics are tuned for typical patterns of professional travel (speaker invitations, conference confirmations, business hotel bookings). Adjust the prompt's WORK/LEISURE/AMBIGUOUS criteria if your travel patterns differ (e.g., heavy leisure traveler, family bookings on shared inboxes).
 - Date extraction relies on email text; ambiguous date formats (e.g., 1/2/2026 = Jan 2 or Feb 1?) may misclassify.
 - The prompt is in **Italian** by default (subject keywords, Telegram messages). Translate if needed.

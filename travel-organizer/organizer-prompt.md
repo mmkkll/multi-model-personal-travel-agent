@@ -60,13 +60,13 @@ Organize travel documents. Search Gmail for booking confirmations and speaker/co
      - Category 2 AMBIGUOUS → DO NOT create until user replies B/L
 
 4. PAGE STRUCTURE on Notion. Each travel page must have these sections (add only relevant ones):
-   - ## ✈️ Voli (table: Tratta, Volo, Data, Orario, Posto, Booking)
-   - ## 🚆 Treni (table: Tratta, Treno, Data, Orario, Posto, PNR)
-   - ## 🏨 Hotel (per hotel: Name, Address, Check-in/out, Booking code, Price)
-   - ## 🚗 Auto a noleggio (Company, Pickup/Return, Dates, Booking code)
-   - ## 🍽️ Ristoranti (Name, Address, Date/Time, Persons, Booking code)
-   - ## 🎫 Esperienze (Name, Date/Time, Location, Booking code)
-   - ## 📎 Documenti allegati (PDF attachments uploaded)
+   - ## ✈️ Flights (table: Route, Flight, Date, Time, Seat, Booking)
+   - ## 🚆 Trains (table: Route, Train, Date, Time, Seat, PNR)
+   - ## 🏨 Hotels (per hotel: Name, Address, Check-in/out, Booking code, Price)
+   - ## 🚗 Car rentals (Company, Pickup/Return, Dates, Booking code)
+   - ## 🍽️ Restaurants (Name, Address, Date/Time, Persons, Booking code)
+   - ## 🎫 Experiences (Name, Date/Time, Location, Booking code)
+   - ## 📎 Documents (PDF attachments uploaded)
 
 5. NOTIFY TELEGRAM (chat ${TELEGRAM_CHAT_ID}) ONLY if at least one email was processed:
    📂 TRAVEL ORGANIZER
@@ -108,14 +108,14 @@ Organize travel documents. Search Gmail for booking confirmations and speaker/co
       - DO NOT ask confirmation — automatic on departure day.
 
 9. ADVANCE NOTICE — WORK TRIPS 5-7 DAYS BEFORE. For each page in business/work:
-   a. Calculate departure_date from title or ✈️ Voli/🚆 Treni (first leg).
+   a. Calculate departure_date from title or ✈️ Flights/🚆 Trains (first leg).
    b. If 5 ≤ (departure_date - today) ≤ 7 days:
       - Verify completeness: flights/trains booked? Hotel? Speech/talk slides ready? Brief received? Bio updated?
-      - Extract TODO list from 📋 Da fare section of the page
+      - Extract TODO list from 📋 TODO section of the page
       - Telegram:
         🎤 PREP REMINDER — [Destination] in X days
         Events: [list of talks/panels with times]
-        ❌ Open TODOs: [bullet list from Da fare section]
+        ❌ Open TODOs: [bullet list from TODO section]
         ✅ Completed: [items already done]
         Start preparing slides/content.
    c. If departure_date ≤ 2 days: also send standard pre-trip checklist (logistics). Run AFTER step 7.
@@ -123,7 +123,7 @@ Organize travel documents. Search Gmail for booking confirmations and speaker/co
    To avoid spam, only send advance notice once per day per trip — track sent notices in a small state file (e.g., `~/.travel-agent/advance-notice-sent.json`).
 
 10. AUTO-ARCHIVE POST-TRIP. For each page in Ready to Travel **AND** business/work:
-    a. Extract trip end date from title or ✈️ Voli section (last return flight).
+    a. Extract trip end date from title or ✈️ Flights section (last return flight).
     b. If end_date < today:
        - Move page to 📦 Past trips (parent ${NOTION_TRAVEL_PAST_TRIPS_ID})
        - DO NOT notify Telegram (silent housekeeping)

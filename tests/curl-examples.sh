@@ -9,10 +9,10 @@ set -e
 N8N="${N8N_BASE_URL:-${1:-http://localhost:5678}}"
 WEBHOOK="${N8N}/webhook/travel-agent"
 
-echo "=== Test 1 — Italy domestic (Florence to Rome) ==="
+echo "=== Test 1 — Domestic short-haul ==="
 curl -s -X POST "$WEBHOOK" \
   -H "Content-Type: application/json" \
-  -d '{"query":"Voli Firenze Roma 10 giugno 2026, 1 passeggero"}' \
+  -d '{"query":"Flights London to Edinburgh on 2026-12-01, 1 passenger"}' \
   --max-time 180 | jq '{
     gemini_len: (.gemini // "" | length),
     perplexity_len: (.perplexity // "" | length),
@@ -24,10 +24,10 @@ curl -s -X POST "$WEBHOOK" \
   }'
 
 echo
-echo "=== Test 2 — Multi-origin fallback (Italy to Lausanne, no airport) ==="
+echo "=== Test 2 — Multi-origin fallback (no direct from primary) ==="
 curl -s -X POST "$WEBHOOK" \
   -H "Content-Type: application/json" \
-  -d '{"query":"Voli e treni da Firenze a Lausanne 19 maggio 2026, business, 1 passeggero"}' \
+  -d '{"query":"Flights and trains from a small city to a major hub on 2026-12-15, business"}' \
   --max-time 180 | jq '{
     duffel_primary: .duffel.primary,
     duffel_recommended: .duffel.recommendedOrigin,
@@ -37,23 +37,33 @@ curl -s -X POST "$WEBHOOK" \
   }'
 
 echo
-echo "=== Test 3 — International (Munich, Germany — disambiguation Monaco vs Munich) ==="
+echo "=== Test 3 — International long-haul (disambiguation case) ==="
 curl -s -X POST "$WEBHOOK" \
   -H "Content-Type: application/json" \
-  -d '{"query":"Voli da Firenze a Monaco di Baviera (Munich, Germania) il 15 giugno 2026 ritorno 17 giugno"}' \
+  -d '{"query":"Flights from New York to Tokyo on 2026-12-20, return 2026-12-27, business class"}' \
   --max-time 180 | jq '{
     duffel_recommended: .duffel.recommendedOrigin,
     duffel_top_carriers: [.duffel.byOrigin[.duffel.recommendedOrigin].direct[].carrier] | unique,
-    gmaps_routes: [.gmaps.routes[] | {duration, distance_km, transit_lines: [.steps[].line]}]
+    gmaps_routes_count: (.gmaps.routes // [] | length)
   }'
 
 echo
-echo "=== Test 4 — Spain (Barcelona) ==="
+echo "=== Test 4 — European cross-border with LCC ==="
 curl -s -X POST "$WEBHOOK" \
   -H "Content-Type: application/json" \
-  -d '{"query":"Voli FLR a BCN 16 giugno 2026 ritorno 17 giugno, business"}' \
+  -d '{"query":"Flights Berlin to Madrid 2026-09-15 ritorno 2026-09-17"}' \
   --max-time 180 | jq '{
     duffel_recommended: .duffel.recommendedOrigin,
-    duffel_carriers_with_lcc: [.duffel.byOrigin[.duffel.recommendedOrigin].any[].carrier] | unique,
+    duffel_carriers: [.duffel.byOrigin[.duffel.recommendedOrigin].any[].carrier] | unique,
     duffel_cheapest: .duffel.byOrigin[.duffel.recommendedOrigin].any[0]
+  }'
+
+echo
+echo "=== Test 5 — Pure transit (train) ==="
+curl -s -X POST "$WEBHOOK" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"Train from Paris to Brussels on 2026-11-10 morning"}' \
+  --max-time 180 | jq '{
+    gmaps_routes: [.gmaps.routes[] | {duration, distance_km, transit_lines: [.steps[].line]}],
+    duffel_note: .duffel.note
   }'

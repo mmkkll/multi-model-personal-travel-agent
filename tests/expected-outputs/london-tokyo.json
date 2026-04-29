@@ -1,0 +1,72 @@
+{
+  "_comment": "Sample expected output for query 'Flights from London to Tokyo on 2026-12-10, business class, 1 passenger'. Real responses will vary by date and current pricing — this is a representative snapshot.",
+
+  "gemini": "For your business trip from London to Tokyo on December 10, 2026, here are the best options... [4500-5000 chars of LLM analysis covering Star Alliance routing via European hubs, Oneworld via Heathrow with British Airways/JAL, recommendations on cabin product (LH First, ANA The Suite, JAL Sky Suite), packing advice for Tokyo December weather (~5-12°C), JR Rail Pass tip for in-country travel]",
+
+  "perplexity": "### Flight options London → Tokyo, December 10, 2026, business class\n\n1. **JAL JL44** Direct LHR → HND, 11h35min, ~£3,200-4,500 business\n2. **British Airways BA5** Direct LHR → HND, 11h45min, ~£3,500-5,000 business (Oneworld, Avios accrual)\n3. **ANA NH212** Direct LHR → HND, 11h35min, ~£3,400-4,800 business (Star Alliance, Mileage Club)\n4. Connection options via Frankfurt (LH+Star), Helsinki (AY+Oneworld), or Doha (QR)... [3000-3500 chars]",
+
+  "openai": "Here's a curated itinerary for your London-Tokyo business trip... [2000-2500 chars]",
+
+  "duffel": {
+    "primary": "LHR",
+    "recommendedOrigin": "LHR",
+    "usedFallback": false,
+    "note": "Direct flights available from LHR",
+    "originsChecked": ["LHR", "LGW", "STN", "LTN", "MAN"],
+    "byOrigin": {
+      "LHR": {
+        "direct": [
+          {
+            "carrier": "Japan Airlines",
+            "flight_number": "JL44",
+            "stops": 0,
+            "dep": "2026-12-10T19:00:00",
+            "arr": "2026-12-11T16:35:00",
+            "price": 3245.00,
+            "currency": "GBP"
+          },
+          {
+            "carrier": "British Airways",
+            "flight_number": "BA5",
+            "stops": 0,
+            "dep": "2026-12-10T13:00:00",
+            "arr": "2026-12-11T10:45:00",
+            "price": 3567.00,
+            "currency": "GBP"
+          },
+          {
+            "carrier": "ANA All Nippon Airways",
+            "flight_number": "NH212",
+            "stops": 0,
+            "dep": "2026-12-10T11:30:00",
+            "arr": "2026-12-11T09:05:00",
+            "price": 3489.00,
+            "currency": "GBP"
+          }
+        ],
+        "any": []
+      },
+      "LGW": {"direct": [], "any": []},
+      "STN": {"direct": [], "any": []},
+      "LTN": {"direct": [], "any": []},
+      "MAN": {
+        "direct": [],
+        "any": [
+          {
+            "carrier": "KLM",
+            "flight_number": "KL1066",
+            "stops": 1,
+            "price": 2890.00,
+            "currency": "GBP"
+          }
+        ]
+      }
+    }
+  },
+
+  "gmaps": {
+    "_comment": "Google Maps Routes returns no transit routes for intercontinental London->Tokyo (~9600km). Empty routes array is expected.",
+    "error": null,
+    "routes": []
+  }
+}

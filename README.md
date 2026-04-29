@@ -10,11 +10,15 @@ A self-hosted travel assistant that combines **5 data sources in parallel** (3 L
 
 Send a natural-language query via Telegram or HTTP webhook:
 
-> "Voli e treni da Firenze a Lausanne 19 maggio 2026, business, 1 passeggero"
+> "Flights from London to Tokyo on 2026-12-10, return 2026-12-17, business class, 2 passengers"
+
+> "Train from Berlin to Munich on 2026-11-20"
+
+> "Voli da Roma a Barcellona il 15 giugno 2026"  *(any language)*
 
 Get back:
-- **Real flight options with prices** from Duffel (300+ airlines including LCC: Ryanair, Vueling, easyJet, etc.)
-- **Multi-origin fallback**: if no direct flights from your primary airport, the agent searches alternative origins (e.g., FLR → BLQ → PSA → FCO → LIN) for direct routes
+- **Real flight options with prices** from Duffel (300+ airlines including LCC: Ryanair, easyJet, Vueling, Wizz, etc.)
+- **Multi-origin fallback**: if no direct flights from your primary airport, the agent searches alternative origins for direct routes (e.g., LHR → LGW → STN → LTN → MAN, or any chain you configure)
 - **Transit/train routes** from Google Maps Routes API (intercity rail, subway, bus, light rail)
 - **Synthesis from 3 LLMs** (Gemini, Perplexity, OpenAI) — strategic recommendations, hotel/restaurant suggestions, packing advice
 
@@ -71,11 +75,11 @@ Then:
 
 ## Quick start
 
-1. Read [`INSTALL.md`](./INSTALL.md) for full setup (Telegram bot, API keys, n8n, Notion).
+1. Read [`INSTALL.md`](./INSTALL.md) for full setup (Telegram bot, API keys, n8n, Notion). Plan ~90-120 minutes.
 2. Configure your `.env` from `.env.example`.
 3. Import `n8n/travel-agent-workflow.json` into your n8n instance.
 4. Activate the Telegram channels plugin in Claude Code.
-5. Send a test query to your bot: "Voli Firenze Roma 10 giugno 2026".
+5. Send a test query to your bot — examples in [`USAGE.md`](./USAGE.md).
 
 ## Components
 
@@ -84,26 +88,26 @@ Then:
 | Claude Code (CLI) | Orchestrator: Telegram bot interface, Notion sync, prompt-driven workflows | https://docs.claude.com/en/docs/claude-code |
 | n8n (self-hosted) | Multi-model parallel orchestration of LLMs and APIs | https://n8n.io |
 | Telegram Bot API | User interface (chat, voice notes, attachments) | https://core.telegram.org/bots |
-| Duffel API | Real flight inventory (300+ airlines) | https://duffel.com |
+| Duffel API | Real flight inventory (300+ airlines including LCC) | https://duffel.com |
 | Google Maps Routes API | Transit routing (trains, buses, subways) | https://developers.google.com/maps/documentation/routes |
 | OpenAI API | LLM research + JSON parameter extraction | https://platform.openai.com |
-| Google Gemini API | LLM research (Star Alliance hub awareness) | https://ai.google.dev |
+| Google Gemini API | LLM research (multi-modal capable) | https://ai.google.dev |
 | Perplexity API | LLM research (web-grounded answers) | https://docs.perplexity.ai |
 | Notion API | Trip organization workspace | https://developers.notion.com |
 
-## Cost estimate (personal use, ~20 trips/month)
+## Cost estimate (personal use, ~50 queries/month)
 
 | Service | Volume | Cost |
 |---|---|---|
-| Duffel (search-only, no bookings) | 100 searches | ~$0.50/month |
-| Google Maps Routes | 20 transit queries | $0 (free tier $200/mo) |
-| OpenAI gpt-4o-mini (Extract Params) | 20 calls | ~$0.10/month |
-| OpenAI gpt-4o (research) | 20 calls × 2k tokens | ~$0.40/month |
-| Gemini 2.5 Flash | 20 calls | $0 (free tier) |
-| Perplexity sonar | 20 calls | ~$0.20/month |
+| Duffel (search-only, no bookings via API) | 250 searches | ~$0.50/month |
+| Google Maps Routes | 50 transit queries | $0 (free tier $200/mo, ~10k requests free) |
+| OpenAI gpt-4o-mini (Extract Params) | 50 calls | ~$0.10/month |
+| OpenAI gpt-4o (research) | 50 calls × 2k tokens | ~$1/month |
+| Gemini Flash | 50 calls | $0 (free tier) |
+| Perplexity sonar | 50 calls | ~$0.50/month |
 | Notion API | unlimited | $0 |
 | Telegram Bot API | unlimited | $0 |
-| **Total** | | **~$1-2/month** |
+| **Total** | | **~$2-3/month** |
 
 ## License
 
@@ -118,3 +122,16 @@ MIT. See [LICENSE](./LICENSE).
 - Consider OAuth flow for shared Notion workspaces
 
 PRs welcome.
+
+## Customization
+
+The shipped workflow includes a default fallback chain `FLR, BLQ, PSA, FCO, LIN` (sample regional cluster). Customize for your region:
+
+- **UK**: `LHR, LGW, STN, LTN, MAN`
+- **US East Coast**: `JFK, LGA, EWR, BWI, BOS`
+- **DACH**: `FRA, MUC, ZRH, VIE, BER`
+- **Iberia**: `MAD, BCN, LIS, OPO, AGP`
+
+Edit the prompt in the `Extract Params` node (n8n UI). The Code node `Duffel Flights` also has a `FALLBACK_CHAIN` constant — update it to match.
+
+See [`USAGE.md`](./USAGE.md) for more customization patterns (custom LLM prompts, adding a 4th model, hotel search, etc.).

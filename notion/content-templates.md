@@ -15,9 +15,9 @@ Brief context about the destination's airport / station situation.
 - Closest airport: ...
 - Alternative hub: ...
 
-## ✈️ VOLI REALI (Duffel — origin → destination DATE)
+## ✈️ REAL FLIGHTS (Duffel — origin → destination DATE)
 
-> Multi-origin search: tried FLR → BLQ → PSA → FCO → LIN.
+> Multi-origin search: tried <primary> → <fallback 1> → <fallback 2> → ...
 > Result: <recommended origin> has direct flights.
 
 ### <recommended origin> → <destination> — N direct flights
@@ -28,11 +28,11 @@ Brief context about the destination's airport / station situation.
 
 ### Origins checked (reference)
 
-- FLR: 0 direct, cheapest 1-stop ITA AZ... €... 
-- BLQ: 0 direct, ...
+- <ORIGIN_1>: N direct, cheapest 1-stop <Carrier> <FlightNum> <price>
+- <ORIGIN_2>: N direct, ...
 - ...
 
-## 🚆 TRENI/TRANSIT (Google Maps Routes)
+## 🚆 TRAINS / TRANSIT (Google Maps Routes)
 
 ### Route A — VIA <hub> (recommended) ⭐
 - Total duration · distance · transfer count
@@ -44,7 +44,7 @@ Brief context about the destination's airport / station situation.
 ### Route C — ...
 ...
 
-## 🎯 RACCOMANDAZIONE FINALE
+## 🎯 FINAL RECOMMENDATION
 
 Synthesis of 3 LLM outputs:
 - Best Star Alliance: ...
@@ -63,9 +63,9 @@ Synthesis of 3 LLM outputs:
 
 - [Carrier 1](https://...) · [Carrier 2](https://...) · ...
 
-## 📊 Metadata ricerca
+## 📊 Search metadata
 
-- Modelli interrogati: Gemini, Perplexity, OpenAI, Duffel multi-origin, Google Maps Routes
+- Models queried: Gemini, Perplexity, OpenAI, Duffel multi-origin, Google Maps Routes
 - Multi-origin fallback used: <yes/no, which origin>
 - Refresh: <ISO timestamp>
 ```
@@ -73,54 +73,53 @@ Synthesis of 3 LLM outputs:
 ## Template — Trip confirmed (after booking emails arrive)
 
 ```markdown
-**Trip dates**: 2026-05-19 → 2026-05-21
+**Trip dates**: 2026-09-15 → 2026-09-18
 **Type**: business
-**Event**: HumanX Summit 2026
-**Role**: panelist (panel "Beyond Tourism: Destinations as Engines of Innovation", 2026-05-20 11:00)
+**Event**: <Conference / Summit name>
+**Role**: <speaker / panelist / attendee> (event details + time)
 
 ## 📅 Overview
 
-- Mon 18/5 evening: arrival
-- Tue 19/5: travel + check-in
-- Wed 20/5: panel + summit
-- Thu 21/5: departure
+- Day 1 evening: arrival + welcome dinner
+- Day 2: travel + check-in
+- Day 3: main event
+- Day 4: departure
 
-## ✈️ Voli
+## ✈️ Flights
 
-| Tratta | Carrier | Flight | Date | Time | Seat | Booking |
+| Route | Carrier | Flight | Date | Time | Seat | Booking |
 |---|---|---|---|---|---|---|
-| FCO→GVA | ITA | AZ0576 | 19/5 | 09:05→10:40 | 12A | <PNR> |
-| GVA→FCO | SWISS | LX1683 | 21/5 | 10:00→11:30 | 8C | <PNR> |
+| <ORIGIN>→<DEST> | <Carrier> | <FlightNum> | <Date> | <Departure→Arrival> | <Seat> | <PNR> |
+| <DEST>→<ORIGIN> | <Carrier> | <FlightNum> | <Date> | <Departure→Arrival> | <Seat> | <PNR> |
 
-## 🚆 Treni
+## 🚆 Trains
 
-| Tratta | Treno | Date | Time | Posto | Booking |
+| Route | Train | Date | Time | Seat | Booking |
 |---|---|---|---|---|---|
-| Firenze SMN → Roma Termini | Frecciarossa 9550 | 19/5 | 06:30→08:05 | 4D | <PNR> |
-| ... | ... | ... | ... | ... | ... |
+| <Station A> → <Station B> | <Train name/number> | <Date> | <Departure→Arrival> | <Seat> | <PNR> |
 
-## 🏨 Hotel
+## 🏨 Hotels
 
-### <hotel name> — Lausanne (2 notti, 19→21 May)
+### <hotel name> — <city> (N nights)
 - Address: ...
 - Confirmation: <booking ID>
-- Price: €X total
+- Price: <amount> <currency> total
 - Notes: free Wi-Fi, breakfast included, ...
 
-## 🚗 Auto a noleggio
+## 🚗 Car rentals
 
 (if applicable)
 
-## 🍽️ Ristoranti
+## 🍽️ Restaurants
 
 - Sun 18/5 dinner: <restaurant>, booked for 8pm, 4 persons, conf# ...
 - Tue 20/5 lunch: panel networking lunch (provided by event)
 
-## 🎫 Esperienze
+## 🎫 Experiences
 
 (museums, tours, side activities)
 
-## 📎 Documenti
+## 📎 Documents
 
 (attached PDFs: boarding pass, hotel confirmation, contract)
 
@@ -131,7 +130,7 @@ Synthesis of 3 LLM outputs:
 - Hotel concierge: ...
 - Local taxi/transport: ...
 
-## 📋 Da fare prima della partenza
+## 📋 Pre-departure TODO
 
 - [ ] Boarding pass mobile (24h prima)
 - [ ] Slides finali per panel
@@ -139,7 +138,7 @@ Synthesis of 3 LLM outputs:
 - [ ] Print backup of confirmations
 - [ ] Charge devices, pack adapters
 
-## 📍 Note logistiche
+## 📍 Logistics notes
 
 - Transit time airport ↔ city center
 - Local SIM / eSIM / Wi-Fi info
@@ -166,7 +165,7 @@ After the trip end date passes, the agent moves the page to `📦 Past trips` an
 ## 📊 Travel statistics
 
 - Total distance: ...km
-- Total cost: €...
+- Total cost: <currency> ...
 - Carriers used: ...
 - Carbon footprint: ... (if you track this)
 ```

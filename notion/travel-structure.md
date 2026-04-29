@@ -61,31 +61,31 @@ Every trip page (regardless of folder) follows this structure. Sections appear o
 ## 📍 Geography
 Brief context: city, region, nearest airports, transit hubs.
 
-## ✈️ Voli
+## ✈️ Flights
 | # | Carrier | Flight | Route | Stops | Departure | Arrival | Price |
 |---|---|---|---|---|---|---|---|
-| 1 | ... | ... | FLR→GVA | direct | 09:05 | 10:40 | €302 |
+| 1 | <Carrier> | <FlightNum> | <ORIGIN>→<DEST> | direct | <Dep> | <Arr> | <Price> |
 
 (Multi-origin fallback: if no direct flights from primary airport, alternatives shown.)
 
-## 🚆 Treni / Transit
+## 🚆 Trains / Transit
 - Route A: 7h38min via Zürich HB (Frecciarossa+EC150+IC1)
 - Route B: 8h01min via Lugano (RE80+IC2+IC5)
 - Route C: ...
 
-## 🏨 Hotel
+## 🏨 Hotels
 For each: name, address, check-in/out, booking code, price, link.
 
-## 🚗 Auto a noleggio
+## 🚗 Car rentals
 Company, pickup/return, dates, booking code.
 
-## 🍽️ Ristoranti
+## 🍽️ Restaurants
 Name, address, date/time, persons, booking code.
 
-## 🎫 Esperienze
+## 🎫 Experiences
 Tours, museums, activities, tickets.
 
-## 📎 Documenti allegati
+## 📎 Documents
 Boarding passes, vouchers, contracts (PDF uploads).
 
 ## 🎯 Raccomandazione finale
@@ -103,7 +103,7 @@ Direct links to airline, rail, hotel websites.
 ## 📊 Metadata
 - Models queried: Gemini, Perplexity, OpenAI, Duffel, Google Maps
 - Refresh date: 2026-04-29
-- Multi-origin fallback used: FLR → FCO
+- Multi-origin fallback used: <primary> → <recommended>  (or "no fallback needed")
 ```
 
 ## Optional database properties

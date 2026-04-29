@@ -4,16 +4,19 @@
 
 ### Via Telegram (recommended)
 
-Just send a natural-language message to your bot. Examples:
+Just send a natural-language message to your bot. Examples (any language):
 
 ```
-Voli Firenze Roma 10 giugno 2026, 1 passeggero
+Flights from London to Tokyo on 2026-12-10, 1 passenger
 ```
 ```
-Voli e treni da Bologna a Berlino 5 maggio 2026 ritorno 7 maggio, business
+Train from Berlin to Munich on 2026-11-20
 ```
 ```
-Solo treni da Milano a Parigi 14 giugno 2026
+Voli da Roma a Madrid il 15 giugno 2026, business
+```
+```
+Vuelo de Madrid a Buenos Aires 5 enero 2027, ida y vuelta
 ```
 
 The agent will:
@@ -27,7 +30,7 @@ The agent will:
 ```bash
 curl -X POST "http://localhost:5678/webhook/travel-agent" \
   -H "Content-Type: application/json" \
-  -d '{"query":"Voli e treni da Firenze a Lausanne 19 maggio 2026, business"}' \
+  -d '{"query":"Flights from Paris to New York on 2026-09-15, business"}' \
   --max-time 180 | jq
 ```
 
@@ -35,46 +38,38 @@ Response shape:
 
 ```json
 {
-  "gemini": "Buongiorno...",
-  "perplexity": "### Opzioni Voli...",
-  "openai": "Per il tuo viaggio...",
+  "gemini": "Hello, I'm your travel agent. For your business trip...",
+  "perplexity": "### Flight options\nFor your trip from Paris (CDG)...",
+  "openai": "Here's a curated itinerary for your trip...",
   "duffel": {
-    "primary": "FLR",
-    "recommendedOrigin": "FCO",
-    "usedFallback": true,
-    "note": "Nessun volo diretto da FLR, fallback su FCO",
+    "primary": "CDG",
+    "recommendedOrigin": "CDG",
+    "usedFallback": false,
+    "note": "Direct flights available from CDG",
     "byOrigin": {
-      "FLR": {"direct": [], "any": [...]},
-      "BLQ": {"direct": [], "any": [...]},
-      "PSA": {"direct": [], "any": [...]},
-      "FCO": {"direct": [
-        {
-          "carrier": "ITA Airways",
-          "flight_number": "AZ0576",
-          "stops": 0,
-          "dep": "2026-05-19T09:05:00",
-          "arr": "2026-05-19T10:40:00",
-          "price": 302.28,
-          "currency": "EUR"
-        }
-      ], "any": [...]},
-      "LIN": {"direct": [], "any": [...]}
+      "CDG": {
+        "direct": [
+          {
+            "carrier": "Air France",
+            "flight_number": "AF6",
+            "stops": 0,
+            "dep": "2026-09-15T10:30:00",
+            "arr": "2026-09-15T13:00:00",
+            "price": 642.50,
+            "currency": "EUR"
+          }
+        ],
+        "any": [...]
+      },
+      "ORY": {"direct": [], "any": [...]}
     }
   },
   "gmaps": {
     "routes": [
       {
         "duration": "27480s",
-        "distance_km": 766,
-        "steps": [
-          {
-            "vehicle": "HEAVY_RAIL",
-            "line": "FR",
-            "from": "Firenze SMN",
-            "to": "Bologna Centrale"
-          },
-          ...
-        ]
+        "distance_km": 5837,
+        "steps": [...]
       }
     ]
   }
@@ -85,12 +80,13 @@ Response shape:
 
 | Pattern | Example | Agent extracts |
 |---|---|---|
-| Single origin + destination + date | "Voli FLR a BCN 10 giugno" | origin=FLR, dest=BCN, date=2026-06-10 |
-| With return date | "Voli FLR-BCN andata 10/6 ritorno 12/6" | + return_date=2026-06-12 |
-| Origin via city name | "Voli da Firenze a Lausanne 19/5/2026" | origin=FLR (Firenze→FLR resolved) |
-| Destination without airport | "Voli a Lausanne" | dest=GVA (Lausanne has no airport, nearest IATA = Geneva) |
-| Multiple passengers | "2 passeggeri Roma Madrid 1 luglio" | passengers=2 |
-| Business/leisure context | "Viaggio business..." or "vacanza..." | hints LLMs (no params change) |
+| Single origin + destination + date | "Flights LHR to JFK 2026-12-01" | origin=LHR, dest=JFK, date=2026-12-01 |
+| With return date | "London to NYC out 12/01 back 12/05" | + return_date=2026-12-05 |
+| Origin via city name | "Flights from Berlin to Madrid Jul 10" | origin=BER (resolved from city) |
+| Destination without airport | "Train to Lausanne next Friday" | dest=GVA (Lausanne has no airport, nearest IATA = Geneva) |
+| Multiple passengers | "2 passengers Rome to Lisbon May 1" | passengers=2 |
+| Ambiguous city | "Flight to Springfield" | The model picks the most likely (e.g., SGF for Springfield, MO) — disambiguate by adding country: "to Springfield, IL, USA" |
+| Business/leisure context | "Business trip to..." or "Vacation in..." | hints LLMs (no params change) |
 
 ## Notion output
 
@@ -101,9 +97,9 @@ After processing, the agent saves a structured trip page to Notion. Default rout
 
 Each Notion page includes (where data is available):
 
-- ✈️ Voli — Duffel offers table with prices
-- 🚆 Treni — Google Maps Routes alternatives with line names
-- 🎯 Raccomandazione finale — synthesized from 3 LLMs
+- ✈️ Flights — Duffel offers table with prices
+- 🚆 Trains — Google Maps Routes alternatives with line names
+- 🎯 Recommendation — synthesized from 3 LLMs
 - 📋 TODO — derived from query intent + LLM suggestions
 - 🔗 Booking links — direct links to airline/rail/booking sites
 - 📊 Metadata — refresh timestamp, models queried, fallback used
@@ -114,28 +110,87 @@ Send a Telegram voice note. The Claude Code session uses Whisper to transcribe l
 
 ## Limitations
 
-- **Free tier limits**: Gemini 2.5 Flash has 15 RPM. If you query rapidly you'll hit `429 RESOURCE_EXHAUSTED`. Mitigation: switch to `gemini-flash-latest` (auto-routes to least loaded variant) or a paid tier.
+- **Free tier limits**: Gemini Flash has 15 RPM. If you query rapidly you'll hit `429 RESOURCE_EXHAUSTED`. Mitigation: use `gemini-flash-latest` (auto-routes to least loaded variant) or upgrade to Tier 1.
 - **Duffel test mode**: includes "Duffel Airways" stub carrier and capped slot diversity. Use live mode for real prices.
-- **Google Maps Routes**: covers public transit only. Doesn't include intercity bus operators outside major networks. Italian high-speed rail (Frecciarossa, Italo) coverage depends on operator GTFS feeds — usually OK for Frecciarossa, partial for Italo.
+- **Google Maps Routes**: covers public transit only. Doesn't include intercity bus operators outside major networks. Coverage of operators depends on their GTFS feeds — usually OK for major rail (Frecciarossa, ICE, TGV, Eurostar), partial for some regional carriers.
 - **No booking**: this agent only researches. Actual booking happens via the airline/rail website.
-- **Origin defaults**: the workflow's Extract Params prompt assumes Italian users. To customize default origins, edit the prompt inside the `Extract Params` node in n8n.
 
 ## Customization
 
-### Change default origins
+### Change default origins (FALLBACK_CHAIN)
 
-Edit the `Extract Params` node's prompt in n8n. The default fallback chain is `[FLR, BLQ, PSA, FCO, LIN]`. Change to your own preference (e.g., `[LHR, LGW, STN, LTN, MAN]` for UK users).
+The shipped fallback chain `FLR, BLQ, PSA, FCO, LIN` is a sample regional cluster. To customize for your region:
 
-The fallback chain is also hardcoded in the `Duffel Flights` Code node — search for `FALLBACK_CHAIN` constant.
+1. **In the `Extract Params` node prompt** — n8n UI → open the node → edit `jsonBody`. Update the IATA mapping rules to match your region:
+
+   ```
+   REGOLE IATA:
+   - London -> LHR (default), LGW/STN if specified
+   - New York -> JFK (default), LGA, EWR if specified
+   - Tokyo -> HND (default), NRT if specified
+   - ...
+   ```
+
+2. **In the `Duffel Flights` Code node** — search for `FALLBACK_CHAIN` and update:
+
+   ```javascript
+   const FALLBACK_CHAIN = ['LHR', 'LGW', 'STN', 'LTN', 'MAN'];   // UK
+   const FALLBACK_CHAIN = ['JFK', 'LGA', 'EWR', 'BWI', 'BOS'];   // US East Coast
+   const FALLBACK_CHAIN = ['FRA', 'MUC', 'ZRH', 'VIE', 'BER'];   // DACH
+   const FALLBACK_CHAIN = ['MAD', 'BCN', 'LIS', 'OPO', 'AGP'];   // Iberia
+   ```
+
+The agent always tries the user-specified primary origin first, then iterates through the fallback chain to find direct flights.
 
 ### Adjust LLM prompts
 
-Each of the 3 LLM nodes (Gemini, Perplexity, OpenAI) has its own prompt embedded in the `jsonBody` parameter. Customize tone, length, focus areas (e.g., add "always include sustainability rating" or "prefer airlines with vegetarian meal options").
+Each of the 3 LLM nodes (Gemini, Perplexity, OpenAI) has its own prompt embedded in the `jsonBody` parameter. Customize tone, length, focus areas:
+
+- "always include sustainability rating"
+- "prefer airlines with vegetarian meal options"
+- "mention frequent-flyer alliance benefits (Star Alliance / SkyTeam / Oneworld)"
+- "include carbon footprint estimates"
+- "always reply in Spanish" (or any language)
 
 ### Add a 4th LLM
 
-Duplicate one of the LLM HTTP nodes, point it at a new provider (Anthropic Claude, Mistral, etc.). Wire it into the Merge node (bump `numberInputs` to 6) and update the Format Results JS to include the new key.
+Duplicate one of the LLM HTTP nodes, point it at a new provider:
+- **Anthropic Claude**: `https://api.anthropic.com/v1/messages`
+- **Mistral**: `https://api.mistral.ai/v1/chat/completions`
+- **DeepSeek**: `https://api.deepseek.com/chat/completions`
+- **Together AI**: `https://api.together.xyz/v1/chat/completions`
+
+Wire it into the Merge node (bump `numberInputs` to 6) and update the Format Results JS to include the new key.
 
 ### Add hotel search
 
-Duffel's `/stays` API also supports hotel search. You can add a 6th node "Duffel Stays" that runs in parallel for hotel inventory.
+Duffel's `/stays` API supports hotel search. Add a 6th node "Duffel Stays" that runs in parallel:
+
+```
+POST https://api.duffel.com/stays/search
+Headers: Authorization: Bearer ${DUFFEL_API_KEY}, Duffel-Version: v2
+Body: {
+  "data": {
+    "location": {"radius": 10, "geographic_coordinates": {...}},
+    "check_in_date": "2026-12-01",
+    "check_out_date": "2026-12-03",
+    "guests": [{"type": "adult"}, {"type": "adult"}]
+  }
+}
+```
+
+Or for chain-specific (e.g., Marriott Bonvoy, Hilton Honors): use their respective APIs (Marriott Direct Booking API, Hilton Connect API — both partnership-only).
+
+### Add restaurant search
+
+Google Places API "nearbysearch" works well for restaurants near the destination. Add an HTTP node parallel to GMaps Transit. Combine in the Format Results JS.
+
+### Change default language
+
+The `Extract Params` prompt is in English by default but accepts queries in any language. To change the *prompt language itself*:
+
+1. Open the `Extract Params` node in n8n UI.
+2. Edit the prompt text in `jsonBody` — translate the rules and examples to your language.
+3. Update the LLM research prompts (Gemini, Perplexity, OpenAI) to respond in your preferred language.
+
+The agent will work fine in any language as long as Extract Params can parse the query and the LLMs can respond.
