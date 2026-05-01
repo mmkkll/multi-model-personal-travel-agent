@@ -12,7 +12,7 @@ Organize travel documents. Search Gmail for booking confirmations and speaker/co
 1. SEARCH GMAIL (last 3h). Two queries in parallel:
 
    a) BOOKING CONFIRMATIONS:
-      is:unread (subject:(confirmation OR conferma OR booking OR reservation OR prenotazione OR itinerary OR e-ticket OR receipt OR boarding) OR from:(trenitalia OR italotreno OR lufthansa OR swiss OR ita-airways OR vueling OR ryanair OR easyjet OR booking.com OR marriott OR expedia OR hotels.com OR hertz OR europcar OR avis OR thefork OR opentable OR getyourguide OR viator OR airbnb OR centauro OR recordgo OR sixt OR goldcar OR firefly OR octorate)) newer_than:3h
+      is:unread (subject:(confirmation OR conferma OR booking OR reservation OR prenotazione OR itinerary OR e-ticket OR receipt OR boarding OR voucher OR autonoleggio) OR from:(trenitalia OR italotreno OR lufthansa OR swiss OR ita-airways OR vueling OR ryanair OR easyjet OR booking.com OR marriott OR expedia OR hotels.com OR hertz OR europcar OR avis OR thefork OR opentable OR getyourguide OR viator OR airbnb OR centauro OR recordgo OR sixt OR goldcar OR firefly OR octorate OR drivalia OR budget OR alamo OR enterprise OR thrifty OR dollar)) newer_than:3h
 
    b) INDIRECT SIGNALS (speaker / panel / event invitations):
       is:unread (subject:(panel OR speech OR talk OR keynote OR speaker OR relatori OR relatore OR intervento OR partecipazione OR invito OR invitation OR conference OR forum OR summit OR retreat OR workshop OR webinar OR briefing OR programma OR agenda) OR ("ti aspettiamo" OR "ti invito" OR "save the date")) -from:noreply* -from:no-reply* -from:notification* -from:donotreply* newer_than:3h
