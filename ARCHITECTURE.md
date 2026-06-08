@@ -146,6 +146,43 @@ A separate, periodic prompt-driven task (run every ~2 hours via cron):
 
 See [`travel-organizer/`](./travel-organizer/) for the full prompt and operational notes.
 
+## Local research mode (ScrapeGraphAI)
+
+A second, **infrastructure-free** research path lives in [`scrapegraph/`](./scrapegraph/).
+It replaces the n8n webhook + Duffel + Perplexity + OpenAI stack with a single Gemini
+key and a local Python venv, for when you want quick destination research without prices.
+
+```
+┌──────────┐   query    ┌─────────────────────────┐
+│  Caller  │──────────▶ │ travel-research.py      │
+│ (CLI /   │            │                         │
+│  agent)  │            │  1. DuckDuckGo search   │  (ddgs — run directly, not SearchGraph)
+└──────────┘            │     → top-N URLs        │
+                        │  2. SmartScraperMulti-  │
+                        │     Graph(prompt, urls) │  → fetch (+ Playwright) → Gemini → merge
+                        │  3. structured dict     │
+                        └────────────┬────────────┘
+                                     ▼
+                     {query, sources:[urls], result:{...}}
+```
+
+Design points:
+
+- **One LLM, many sources.** Diversity comes from multiple *web sources* merged in one
+  Gemini pass, rather than from multiple *models* (the n8n mode's approach). Cheaper and
+  simpler; no cross-model consensus signal.
+- **Markup-agnostic extraction.** `hotel-scraper-sg.py` and `article-extract-sg.py` let
+  the LLM read whatever HTML is present, so they survive layout changes that break
+  CSS/regex scrapers.
+- **Dedicated venv.** The heavy deps (langchain + playwright) are installed into
+  `~/.venv-scrapegraph` to avoid polluting the system Python.
+- **Why not `SearchGraph`.** In scrapegraphai 1.x, `SearchGraph` hardcodes a Google
+  search (which gets blocked) and does not propagate a search-engine override to its
+  nodes; we therefore run the DuckDuckGo search ourselves and scrape the URLs.
+
+Weather for either mode comes from [`weather/weather-forecast.mjs`](./weather/)
+(Open-Meteo, no key): daily forecast within 16 days, 10-year climatology beyond.
+
 ## Storage / state
 
 | Where | What | Backup recommendation |

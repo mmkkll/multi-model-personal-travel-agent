@@ -76,6 +76,51 @@ Response shape:
 }
 ```
 
+## Local mode (ScrapeGraphAI) — no n8n
+
+For quick destination research without the n8n stack, use the local tools in
+[`scrapegraph/`](./scrapegraph/). One Gemini key, a Python venv, nothing else.
+
+```bash
+VENV=~/.venv-scrapegraph/bin/python3
+
+# Destination research (DuckDuckGo search → scrape + merge → structured result)
+$VENV scrapegraph/travel-research.py "3 days in Lisbon, what to do and where to eat" --results 5
+
+# As JSON (for piping into your own tooling)
+$VENV scrapegraph/travel-research.py "best day trips from Florence by train" --json
+
+# Resilient hotel extraction from a booking page
+$VENV scrapegraph/hotel-scraper-sg.py --url "https://www.booking.com/hotel/it/example.html" --json
+
+# Article extraction; --subject returns just a visual subject seed (for an image generator)
+$VENV scrapegraph/article-extract-sg.py "https://example.com/destination-guide"
+$VENV scrapegraph/article-extract-sg.py "https://example.com/destination-guide" --subject
+```
+
+Returned shape for `travel-research.py`:
+
+```json
+{
+  "query": "3 days in Lisbon, what to do and where to eat",
+  "sources": ["https://...", "https://...", "..."],
+  "result": { "places": [...], "food": [...], "tips": [...], "...": "..." }
+}
+```
+
+> Local mode does **not** return flight prices or transit routes — for those use the
+> n8n workflow above. The two modes are independent.
+
+## Trip weather (any mode)
+
+```bash
+node weather/weather-forecast.mjs --city "Madrid" --start 2026-05-10 --end 2026-05-15
+node weather/weather-forecast.mjs --city "Tokyo"  --start 2026-09-01 --end 2026-09-07 --json
+node weather/weather-forecast.mjs --lat 40.4 --lon -3.7 --start 2026-05-10 --end 2026-05-15
+```
+
+Daily forecast within 16 days; 10-year climatology beyond. No API key (Open-Meteo).
+
 ## Query patterns
 
 | Pattern | Example | Agent extracts |

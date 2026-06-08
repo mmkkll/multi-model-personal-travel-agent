@@ -236,3 +236,55 @@ If you see `skipped`, the plugin isn't registered. Remove `--plugin-dir` from yo
 3. Watch n8n's Executions tab during a live test.
 4. Add `console.log(JSON.stringify(...))` statements in the Code nodes — they show up in n8n's per-node output.
 5. Search the JSON debug log with `jq 'select(.severity=="ERROR")'`.
+
+---
+
+# Local mode (ScrapeGraphAI)
+
+## `GEMINI_API_KEY not set`
+
+`travel-research.py` / the other tools read the key from the environment or a `.env`
+at the repo root. Fix:
+
+```bash
+export GEMINI_API_KEY="your-gemini-key"     # or add GEMINI_API_KEY= to .env
+```
+
+## `ModuleNotFoundError: scrapegraphai` (or langchain / playwright)
+
+You ran the script with the system Python instead of the dedicated venv. Always use
+the venv interpreter:
+
+```bash
+~/.venv-scrapegraph/bin/python3 scrapegraph/travel-research.py "..."
+```
+
+If the venv itself is missing the deps, reinstall:
+`~/.venv-scrapegraph/bin/pip install -r scrapegraph/requirements.txt`.
+
+## Browser / Playwright errors (`Executable doesn't exist`)
+
+Install the browser into the venv:
+
+```bash
+~/.venv-scrapegraph/bin/playwright install chromium
+```
+
+## `travel-research.py` returns "no search results (DuckDuckGo)"
+
+The `ddgs` package isn't installed, or DuckDuckGo rate-limited the request. Ensure
+`ddgs` is present (`~/.venv-scrapegraph/bin/pip install ddgs`) and retry after a few
+seconds. Note: the tool intentionally does **not** use ScrapeGraphAI's `SearchGraph`
+(it hardcodes a blocked Google search in 1.x) — it runs DuckDuckGo directly.
+
+## A specific page returns empty `result`
+
+Heavily JS-driven, anti-bot pages (Google Hotels, some airline SPAs) don't render in
+headless mode. Point the tool at content-in-HTML pages (hotel/booking pages, blogs,
+guides, news), or use a broader research query so it scrapes multiple sources.
+
+## `pip install scrapegraphai` fails on resolution
+
+scrapegraphai 1.x targets Python 3.9+; 2.x needs 3.10+. On Python 3.9 pin
+`scrapegraphai==1.20.1` (as in `requirements.txt`). Warnings about EOL google-* deps
+are cosmetic and silenced by the tools.

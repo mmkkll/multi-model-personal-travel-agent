@@ -4,6 +4,13 @@
 
 A self-hosted travel assistant that combines **5 data sources in parallel** (3 LLMs + Duffel flight API + Google Maps Routes) to plan business and leisure trips, and automatically organizes booking confirmations and speaker invitations into a structured Notion workspace.
 
+> **Two research modes.** The full **n8n multi-model workflow** gives you real flight
+> prices (Duffel) and transit routing (Google Maps) alongside 3-LLM synthesis. A newer,
+> **lightweight local mode** ([`scrapegraph/`](./scrapegraph/)) does destination research
+> and page extraction with a single Gemini key and **no extra infrastructure** — handy
+> for quick "what to do / where to eat" research without standing up n8n + Duffel.
+> Pick either; they're independent. See [Two research modes](#two-research-modes).
+
 ## What it does
 
 ### 1. Travel research
@@ -75,7 +82,21 @@ Then:
 
 ## Quick start
 
-1. Read [`INSTALL.md`](./INSTALL.md) for full setup (Telegram bot, API keys, n8n, Notion). Plan ~90-120 minutes.
+**Fast path (local mode, ~10 min):** just destination research, one Gemini key, no n8n.
+
+```bash
+python3 -m venv ~/.venv-scrapegraph
+~/.venv-scrapegraph/bin/pip install -r scrapegraph/requirements.txt
+~/.venv-scrapegraph/bin/playwright install chromium
+export GEMINI_API_KEY="your-gemini-key"
+~/.venv-scrapegraph/bin/python3 scrapegraph/travel-research.py "3 days in Lisbon, what to do" --results 5
+```
+
+See [`scrapegraph/README.md`](./scrapegraph/README.md) for the local tools.
+
+**Full path (n8n multi-model, ~90-120 min):** real flight prices + transit + Telegram bot + Notion.
+
+1. Read [`INSTALL.md`](./INSTALL.md) for full setup (Telegram bot, API keys, n8n, Notion).
 2. Configure your `.env` from `.env.example`.
 3. Import `n8n/travel-agent-workflow.json` into your n8n instance.
 4. Activate the Telegram channels plugin in Claude Code.
@@ -94,6 +115,40 @@ Then:
 | Google Gemini API | LLM research (multi-modal capable) | https://ai.google.dev |
 | Perplexity API | LLM research (web-grounded answers) | https://docs.perplexity.ai |
 | Notion API | Trip organization workspace | https://developers.notion.com |
+| ScrapeGraphAI (local mode) | LLM-driven web research + page extraction, single Gemini key | https://github.com/ScrapeGraphAI/Scrapegraph-ai |
+| Open-Meteo (weather) | Free trip weather forecast / climatology, no API key | https://open-meteo.com |
+
+## Two research modes
+
+The two modes are fully independent — set up whichever fits.
+
+| | **n8n multi-model** (full) | **Local mode** ([`scrapegraph/`](./scrapegraph/)) |
+|---|---|---|
+| Flight prices | ✅ Duffel (real, 300+ airlines) | ❌ |
+| Transit routing | ✅ Google Maps Routes | ❌ |
+| LLM synthesis | 3 LLMs in parallel (Gemini + Perplexity + OpenAI) | 1 LLM (Gemini) over scraped web results |
+| Destination research | ✅ | ✅ (DuckDuckGo search → scrape + merge) |
+| Hotel / article extraction | — | ✅ markup-agnostic |
+| Infra needed | n8n + 5 API keys | just a Python venv + 1 Gemini key |
+| Best for | full trip planning with prices | quick research, no infra |
+
+Start with local mode if you just want fast destination research; add the n8n
+workflow when you need real flight prices and transit routes. Setup for each:
+[`scrapegraph/README.md`](./scrapegraph/README.md) and [`INSTALL.md`](./INSTALL.md).
+
+## Repository layout
+
+```
+.
+├── n8n/                  # multi-model workflow (import into n8n)
+├── scrapegraph/          # lightweight local research tools (Python + Gemini)
+├── weather/              # Open-Meteo forecast helper (Node, no key)
+├── notion/               # Notion workspace structure + content templates
+├── telegram-bot/         # bot setup + access allowlist example
+├── travel-organizer/     # Gmail→Notion organizer prompt + notes
+├── tests/                # curl examples + expected outputs
+└── *.md                  # README, INSTALL, USAGE, ARCHITECTURE, TROUBLESHOOTING, CHANGELOG
+```
 
 ## Cost estimate (personal use, ~50 queries/month)
 
@@ -107,7 +162,10 @@ Then:
 | Perplexity sonar | 50 calls | ~$0.50/month |
 | Notion API | unlimited | $0 |
 | Telegram Bot API | unlimited | $0 |
-| **Total** | | **~$2-3/month** |
+| **Total (n8n mode)** | | **~$2-3/month** |
+
+Local mode is cheaper still: Gemini Flash-Lite free tier + Open-Meteo (no key) →
+effectively **$0/month** for personal-volume research.
 
 ## License
 

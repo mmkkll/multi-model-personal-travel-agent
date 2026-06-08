@@ -1,0 +1,15 @@
+# ScrapeGraphAI local research tools — Python deps.
+# Install into a DEDICATED virtualenv (keeps langchain/playwright isolated):
+#
+#   python3 -m venv ~/.venv-scrapegraph
+#   ~/.venv-scrapegraph/bin/pip install -r scrapegraph/requirements.txt
+#   ~/.venv-scrapegraph/bin/playwright install chromium
+#
+# Notes:
+#   - scrapegraphai 1.x supports Python 3.9+. 2.x requires Python 3.10+.
+#   - ddgs provides the DuckDuckGo search used by travel-research.py
+#     (we do the search ourselves; see the note in travel-research.py).
+
+scrapegraphai==1.20.1
+ddgs
+playwright

@@ -19,7 +19,8 @@ Step-by-step setup for the Multi-Model Personal Travel Agent. Plan ~90-120 minut
 7. [Claude Code + Telegram channels plugin](#6--claude-code-with-telegram-channels-plugin)
 8. [Test end-to-end](#7--test-end-to-end)
 9. [Optional: Document Organizer cron](#8--optional-travel-document-organizer)
-10. [Troubleshooting](#troubleshooting)
+10. [Optional: Local research mode (ScrapeGraphAI)](#9--optional-local-research-mode-scrapegraphai)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -569,16 +570,16 @@ For each, you can use a different emoji icon (set via Notion's icon picker). The
 For each of the 5 pages, copy its URL and extract the 32-char hex ID:
 
 ```
-https://www.notion.so/yourworkspace/Inspirations-31ac93b9555e81068bcac0b5c4798b1a
+https://www.notion.so/yourworkspace/Inspirations-0123456789abcdef0123456789abcdef
                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                                                this part = page ID
+                                                this part = page ID (example only)
 ```
 
 The 32-char string at the end (after the last hyphen) is the ID. Notion accepts it with or without dashes (UUID format) for API calls.
 
-Save in `.env`:
+Save in `.env` (use your own page IDs):
 ```
-NOTION_TRAVEL_INSPIRATIONS_ID=31ac93b9555e81068bcac0b5c4798b1a
+NOTION_TRAVEL_INSPIRATIONS_ID=0123456789abcdef0123456789abcdef
 NOTION_TRAVEL_PLANNING_ID=...
 NOTION_TRAVEL_BUSINESS_WORK_ID=...
 NOTION_TRAVEL_READY_ID=...
@@ -779,6 +780,58 @@ This requires:
 
 ---
 
+## 9 — (Optional) Local research mode (ScrapeGraphAI)
+
+A lightweight alternative to the whole n8n stack: destination research and page
+extraction with a single Gemini key, no n8n / Duffel / Perplexity. See
+[`scrapegraph/README.md`](./scrapegraph/README.md) for the tool reference.
+
+### 9.1 Create the dedicated virtualenv
+
+The tools pull in heavy deps (langchain + playwright). Keep them isolated:
+
+```bash
+python3 -m venv ~/.venv-scrapegraph
+~/.venv-scrapegraph/bin/pip install -r scrapegraph/requirements.txt
+~/.venv-scrapegraph/bin/playwright install chromium
+```
+
+> Python 3.9+ works (scrapegraphai 1.x). For scrapegraphai 2.x you need Python 3.10+.
+
+### 9.2 Provide the Gemini key
+
+These tools read `GEMINI_API_KEY` from the environment or from a `.env` file at the
+repo root (same key as [section 3.4](#34-google-gemini)):
+
+```bash
+export GEMINI_API_KEY="your-gemini-key"
+# or add to .env:  GEMINI_API_KEY=your-gemini-key
+```
+
+Optional: `export SCRAPEGRAPH_MODEL="google_genai/gemini-2.5-flash"` to override the
+default `gemini-2.5-flash-lite`.
+
+### 9.3 Test
+
+```bash
+~/.venv-scrapegraph/bin/python3 scrapegraph/travel-research.py "2 days in Porto" --results 4
+```
+
+You should get a JSON object with `query`, `sources` (the scraped URLs), and a
+`result` block of places/activities/tips. If you see `GEMINI_API_KEY not set`, re-check
+9.2. If a specific site returns empty, it's likely an anti-bot/JS-heavy page — try
+another source-rich query (see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)).
+
+### 9.4 (Optional) Weather helper
+
+No install needed beyond Node.js 18+:
+
+```bash
+node weather/weather-forecast.mjs --city "Porto" --start 2026-09-01 --end 2026-09-03
+```
+
+---
+
 ## Troubleshooting
 
 If anything doesn't work end-to-end, see [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md). Quick reference for the most common issues:
@@ -792,3 +845,5 @@ If anything doesn't work end-to-end, see [`TROUBLESHOOTING.md`](./TROUBLESHOOTIN
 | All 5 nodes return empty | `Extract Params` failed | Check OpenAI key + n8n env vars |
 | Telegram silence after sending message | Bot consumed but Claude didn't process | Check debug log, may need bootstrap |
 | Notion 404 on page | Integration not connected to that page | Re-do Connections step |
+| Local mode `ModuleNotFoundError` | Ran with system Python | Use `~/.venv-scrapegraph/bin/python3` |
+| Local mode `GEMINI_API_KEY not set` | Key not exported / not in `.env` | `export GEMINI_API_KEY=...` |
